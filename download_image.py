@@ -7,6 +7,7 @@ import datetime
 import time
 import ConfigParser
 import mysql.connector
+import sys
 
 default_config = {
     "host": "localhost",
@@ -27,9 +28,9 @@ default_config = {
 
 
 class ImageDownloader:
-    def __init__(self):
+    def __init__(self, config="./config.ini"):
         self.inifile = ConfigParser.SafeConfigParser(default_config)
-        self.inifile.read("./config.ini")
+        self.inifile.read(config)
 
     def download_image(self, items):
         if not items:
@@ -46,7 +47,7 @@ class ImageDownloader:
                 item_image = item['image']
                 # filename = be.consts.PATH_IMAGES  + str(item_id)
                 filename = self.get_dir_path() + str(item_id)
-                print "download start %s on %s" % (item_id, filename)
+                print("download start %s on %s " % (item_id, filename))
                 if item_image == '':
                     dl_err.append(str(item['id']))
                     continue
@@ -55,14 +56,14 @@ class ImageDownloader:
                 # success.append(str(item['id']))
                 success.append({"id": item_id, "path": filename})
             except Exception as error:
-                print error
+                print (error)
                 dl_err.append(str(item['id']))
                 continue
             time.sleep(interval)
 
-        print str(len(success)) + " items are downloaded."
+        print(str(len(success)) + " items are downloaded.")
         if len(dl_err) > 0:
-            print "Download Error: " + ', '.join(dl_err)
+            print("Download Error: " + ', '.join(dl_err))
         return success
 
     def get_database_config(self):
@@ -82,11 +83,12 @@ class ImageDownloader:
         table = self.inifile.get("input", "table")
         id_column = self.inifile.get("input", "id_column")
         image_column = self.inifile.get("input", "url_column")
+        path_column = self.inifile.get("output", "path_column")
 
         try:
             cnn = mysql.connector.connect(**self.get_database_config())
             cur = cnn.cursor()
-            sql = "select %s, %s from %s" % (id_column, image_column, table)
+            sql = "select %s, %s from %s where %s IS NULL" % (id_column, image_column, table, path_column)
             cur.execute(sql)
             rows = cur.fetchall()
 
@@ -118,7 +120,7 @@ class ImageDownloader:
             sql2 = "ON DUPLICATE KEY UPDATE %s = VALUES(%s)" % (path_column, path_column)
             # sql = "replace into %s (%s, %s) VALUES " % (table, id_column, path_column)
             sql = sql1 + " (%s, %s) " + sql2
-            print sql
+            # print(sql)
             cur.executemany(sql, values)
             # Make sure data is committed to the database
             cnn.commit()
@@ -170,10 +172,11 @@ class ImageDownloader:
         except:
             return default
 
+
 class Command:  # (BaseCommand):
     def handle(self, *args, **options):
-        print 'Start at ' + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-        print '----'
+        print('Start at ' + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
+        print('----')
 
         start = time.time()
 
@@ -183,6 +186,30 @@ class Command:  # (BaseCommand):
 
         end = time.time()
 
-        print "----"
-        print "Finish at " + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-        print "Spend " + str(end - start) + " seconds"
+        print("----")
+        print("Finish at " + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
+        print("Spend " + str(end - start) + " seconds")
+
+
+if __name__ == "__main__":
+    param = sys.argv
+    if len(param) > 1:
+        downloader = ImageDownloader(param[1])
+    else:
+        downloader = ImageDownloader()
+
+    print('Start at ' + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
+    print('----')
+
+    start = time.time()
+
+    downloader = ImageDownloader()
+    items = downloader.get_items()
+    result = downloader.download_image(items)
+    downloader.save(result)
+
+    end = time.time()
+
+    print("----")
+    print("Finish at " + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
+    print("Spend " + str(end - start) + " seconds")
