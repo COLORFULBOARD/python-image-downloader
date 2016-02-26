@@ -42,7 +42,7 @@ if you make queue db, use MySQL compatibility database.
 (like MySQL, MariaDB, Amazon Aurora)
 
 ```sql
-CREATE TABLE `image_ttt` (
+CREATE TABLE `image_tmp` (
   `id` INT(11) NOT NULL, # if need, specify AUTO_INCREMENT option
   `image` VARCHAR(128) NOT NULL,
   `path` VARCHAR(128) NULL,
@@ -50,10 +50,10 @@ CREATE TABLE `image_ttt` (
 ```
 
 ## License
-https://github.com/wasnot/python-image-downloader/blob/master/LICENSE
+
 [MIT](https://github.com/wasnot/python-image-downloader/blob/master/LICENSE)
 
 
 ## Author
 
-[tcnksm](https://github.com/wasnot)
+[wasnot](https://github.com/wasnot)
