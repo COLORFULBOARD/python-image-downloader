@@ -36,6 +36,19 @@ path        : ~/tmp/item_images/
 # block_time : 2:00-5:00
 ```
 
+## Queueing database
+
+if you make queue db, use MySQL compatibility database.
+(like MySQL, MariaDB, Amazon Aurora)
+
+```sql
+CREATE TABLE `image_ttt` (
+  `id` INT(11) NOT NULL, # if need, specify AUTO_INCREMENT option
+  `image` VARCHAR(128) NOT NULL,
+  `path` VARCHAR(128) NULL,
+  PRIMARY KEY (`id`));
+```
+
 ## License
 https://github.com/wasnot/python-image-downloader/blob/master/LICENSE
 [MIT](https://github.com/wasnot/python-image-downloader/blob/master/LICENSE)
