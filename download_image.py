@@ -6,7 +6,7 @@ import os
 import datetime
 import time
 import ConfigParser
-import mysql.connector
+import MySQLdb
 import sys
 
 default_config = {
@@ -25,6 +25,11 @@ default_config = {
     "interval": "0",
     "block_time": "0:00-0:00",
 }
+
+
+def log(msg):
+    sys.stdout.write(str(msg) + "\n")
+    sys.stdout.flush()
 
 
 class ImageDownloader:
@@ -47,7 +52,7 @@ class ImageDownloader:
                 item_image = item['image']
                 # filename = be.consts.PATH_IMAGES  + str(item_id)
                 filename = self.get_dir_path() + str(item_id)
-                print("download start %s on %s " % (item_id, filename))
+                log("download start %s on %s " % (item_id, filename))
                 if item_image == '':
                     dl_err.append(str(item['id']))
                     continue
@@ -56,20 +61,20 @@ class ImageDownloader:
                 # success.append(str(item['id']))
                 success.append({"id": item_id, "path": filename})
             except Exception as error:
-                print (error)
+                log(error)
                 dl_err.append(str(item['id']))
                 continue
             time.sleep(interval)
 
-        print(str(len(success)) + " items are downloaded.")
+        log(str(len(success)) + " items are downloaded.")
         if len(dl_err) > 0:
-            print("Download Error: " + ', '.join(dl_err))
+            log("Download Error: " + ', '.join(dl_err))
         return success
 
     def get_database_config(self):
         config = {
             "host": self.inifile.get("database", "host"),
-            "port": self.inifile.get("database", "port"),
+            "port": int(self.inifile.get("database", "port")),
             "db": self.inifile.get("database", "db"),
             "user": self.inifile.get("database", "user"),
             "passwd": self.inifile.get("database", "password"),
@@ -86,7 +91,7 @@ class ImageDownloader:
         path_column = self.inifile.get("output", "path_column")
 
         try:
-            cnn = mysql.connector.connect(**self.get_database_config())
+            cnn = MySQLdb.connect(**self.get_database_config())
             cur = cnn.cursor()
             sql = "select %s, %s from %s where %s IS NULL" % (id_column, image_column, table, path_column)
             cur.execute(sql)
@@ -97,8 +102,8 @@ class ImageDownloader:
 
             cur.close()
             cnn.close()
-        except mysql.connector.errors.ProgrammingError as e:
-            print (e)
+        except MySQLdb.Error as e:
+            log(e)
         return items
 
     def save(self, images):
@@ -114,21 +119,21 @@ class ImageDownloader:
             return
 
         try:
-            cnn = mysql.connector.connect(**self.get_database_config())
+            cnn = MySQLdb.connect(**self.get_database_config())
             cur = cnn.cursor()
             sql1 = "INSERT INTO %s (%s, %s) VALUES" % (table, id_column, path_column)
             sql2 = "ON DUPLICATE KEY UPDATE %s = VALUES(%s)" % (path_column, path_column)
             # sql = "replace into %s (%s, %s) VALUES " % (table, id_column, path_column)
             sql = sql1 + " (%s, %s) " + sql2
-            # print(sql)
+            # log(sql)
             cur.executemany(sql, values)
             # Make sure data is committed to the database
             cnn.commit()
 
             cur.close()
             cnn.close()
-        except mysql.connector.errors.ProgrammingError as e:
-            print (e)
+        except MySQLdb.Error as e:
+            log(e)
 
     def get_dir_path(self):
         path = self.inifile.get("output", "path")
@@ -140,13 +145,13 @@ class ImageDownloader:
         last = ""
         dire = []
         # 入れていいディレクトリを探す
-        for file in files:
-            path_tmp = path + file
+        for filename in files:
+            path_tmp = path + filename
             if os.path.isdir(path_tmp):
                 if len(os.listdir(path_tmp)) < limit:
                     dire.append(path_tmp)
-                last = self.get_int_str(file, last)
-                # print "dir: %s %d" % (file, len(os.listdir(path + file)))
+                last = self.get_int_str(filename, last)
+                # log("dir: %s %d" % (file, len(os.listdir(path + file))))
         if len(dire) > 0:
             dire.sort()
             return dire[0] + "/"
@@ -159,24 +164,24 @@ class ImageDownloader:
         else:
             last_int = 0
         while os.path.exists(path + str(last_int)):
-            # print last_int
+            # log(last_int)
             last_int += 1
         last = path + str(last_int)
         os.makedirs(last)
         return last + "/"
 
     @staticmethod
-    def get_int_str(file, default):
+    def get_int_str(filename, default):
         try:
-            return str(int(file))
+            return str(int(filename))
         except:
             return default
 
 
 class Command:  # (BaseCommand):
     def handle(self, *args, **options):
-        print('Start at ' + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
-        print('----')
+        log('Start at ' + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
+        log('----')
 
         start = time.time()
 
@@ -186,9 +191,9 @@ class Command:  # (BaseCommand):
 
         end = time.time()
 
-        print("----")
-        print("Finish at " + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
-        print("Spend " + str(end - start) + " seconds")
+        log("----")
+        log("Finish at " + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
+        log("Spend " + str(end - start) + " seconds")
 
 
 if __name__ == "__main__":
@@ -198,8 +203,8 @@ if __name__ == "__main__":
     else:
         downloader = ImageDownloader()
 
-    print('Start at ' + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
-    print('----')
+    log('Start at ' + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
+    log('----')
 
     start = time.time()
 
@@ -210,6 +215,6 @@ if __name__ == "__main__":
 
     end = time.time()
 
-    print("----")
-    print("Finish at " + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
-    print("Spend " + str(end - start) + " seconds")
+    log("----")
+    log("Finish at " + datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
+    log("Spend " + str(end - start) + " seconds")
