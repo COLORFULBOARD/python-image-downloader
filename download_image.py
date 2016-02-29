@@ -208,7 +208,6 @@ if __name__ == "__main__":
 
     start = time.time()
 
-    downloader = ImageDownloader()
     items = downloader.get_items()
     result = downloader.download_image(items)
     downloader.save(result)
